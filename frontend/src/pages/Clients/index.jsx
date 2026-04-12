@@ -1,18 +1,30 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 function Clients() {
 
     document.title = "Clients List";
 
     const [getClients, setClients] = useState([]);
+    const { id } = useParams();
 
     useEffect(() => {
-        fetch("http://localhost:4400/users")
+        if (!id) {
+            fetch("http://localhost:4400/users")
             .then(res => res.json())
             .then(data => {
                 setClients(data);
             })
             .catch(err => console.error(err));
+
+        } else {
+            fetch(`http://localhost:4400/users/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                setClients([data]);
+            })
+            .catch(err => console.error(err));
+        }
     }, []);
 
     return (

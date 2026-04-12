@@ -11,7 +11,9 @@ function WebRoutes() {
             <Routes>
 
                 <Route path="/products" element={<Products />}></Route>
+                <Route path="/products/:clientID" element={<Products />}></Route>
                 <Route path="/users" element={<Clients />}></Route>
+                <Route path="/users/:id" element={<Clients />}></Route>
 
             </Routes>
         
