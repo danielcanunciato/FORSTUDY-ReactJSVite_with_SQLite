@@ -1,8 +1,8 @@
 :root {
   --text: #6b6375;
   --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
+  --bg: rgb(3, 3, 3)000;
+  --border: #030303;
   --code-bg: #f4f3ec;
   --accent: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
@@ -56,8 +56,8 @@ body {
 }
 
 #root {
-  width: 1126px;
-  max-width: 100%;
+  width: 100vw;
+  max-width: 1920px;
   margin: 0 auto;
   text-align: center;
   border-inline: 1px solid var(--border);
