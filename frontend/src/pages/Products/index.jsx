@@ -1,19 +1,34 @@
 import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 function Products() {
 
     document.title = "Products List";
 
     const [getProds, setProds] = useState([]);
+    const { clientID } = useParams();
 
     useEffect(() => {
-        fetch("http://localhost:4400/products")
+        if (!clientID) {
+            fetch("http://localhost:4400/products")
             .then(res => res.json())
             .then(data => {
                 console.log(data);
                 setProds(data);
             })
             .catch(err => console.error(err));
+
+        } else {
+            fetch(`http://localhost:4400/products/${clientID}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data) {
+                    setProds(data);
+                }
+            })
+            .catch(err => console.error(err));
+        }
+
     }, []);
 
     return (
@@ -38,9 +53,9 @@ function Products() {
                                 textAlign: 'left',
                                 backgroundColor: prod.id % 2 === 0 ? '#0f0f0f' : '#050505'
                             }}
-                            key={prod.id}
+                            key={prod.product_id}
                         >
-                            {prod.name}
+                            <b>{prod.product_id}</b> :: <b>{prod.product_name}</b> from <b>{prod.client_name}</b>
                         </p>
                     ))
                 }
