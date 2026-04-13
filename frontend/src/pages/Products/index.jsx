@@ -23,7 +23,7 @@ function Products() {
             .then(res => res.json())
             .then(data => {
                 if (data) {
-                    setProds([data]);
+                    setProds(data);
                 }
             })
             .catch(err => console.error(err));
@@ -53,9 +53,9 @@ function Products() {
                                 textAlign: 'left',
                                 backgroundColor: prod.id % 2 === 0 ? '#0f0f0f' : '#050505'
                             }}
-                            key={!clientID ? prod.product_id : prod.productID}
+                            key={prod.product_id}
                         >
-                            <b>{!clientID ? prod.product_id : prod.productID}</b> :: <b>{!clientID ? prod.product_name : prod.productName}</b> from <b>{prod.client_name}</b>
+                            <b>{prod.product_id}</b> :: <b>{prod.product_name}</b> from <b>{prod.client_name}</b>
                         </p>
                     ))
                 }

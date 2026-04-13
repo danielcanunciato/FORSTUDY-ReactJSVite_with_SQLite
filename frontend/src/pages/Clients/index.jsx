@@ -6,6 +6,7 @@ function Clients() {
     document.title = "Clients List";
 
     const [getClients, setClients] = useState([]);
+    const [getClientProds, setClientProds] = useState([]);
     const { id } = useParams();
 
     useEffect(() => {
@@ -24,6 +25,14 @@ function Clients() {
                 setClients([data]);
             })
             .catch(err => console.error(err));
+
+            fetch(`http://localhost:4400/products/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                setClientProds(data);
+                console.log(data);
+            })
+            .catch(err => console.error(err));
         }
     }, []);
 
@@ -38,23 +47,58 @@ function Clients() {
             </div>
 
             <div>
-                <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
-                    Clientes Ativos
-                </h3>
 
-                {
-                    getClients.map(user => (
-                        <p
-                            style={{
-                                textAlign: 'left',
-                                backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
-                            }}
-                            key={user.id}
-                        >
-                            {user.id} : {user.name}
-                        </p>
-                    ))
-                }
+                <div>
+
+                    <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
+                        Clientes Ativos
+                    </h3>
+
+                    {
+                        getClients.map(user => (
+                            <p
+                                style={{
+                                    textAlign: 'left',
+                                    backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                }}
+                                key={user.id}
+                            >
+                                <b>{user.id}</b> :: <b>{user.name}</b>
+                            </p>
+                        ))
+                    }
+
+                </div>
+
+                <hr style={{marginTop: '30px'}} />
+
+                <div>
+
+                    { id && 
+                        (
+                            <div>
+                                <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
+                                    Produtos atrelados a este id
+                                </h3>
+
+                                {
+                                    getClientProds.map(clientprod => (
+                                        <p
+                                            style={{
+                                                textAlign: 'left',
+                                                backgroundColor: clientprod.product_id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                            }}
+                                            key={clientprod.product_id}
+                                        >
+                                            <b>{clientprod.product_id}</b> :: <b>{clientprod.product_name}</b>
+                                        </p>
+                                    ))
+                                }
+                            </div>
+                        )
+                    }
+
+                </div>
             </div>
         </>
     );
