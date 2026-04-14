@@ -11,7 +11,7 @@ function Clients() {
 
     useEffect(() => {
         if (!id) {
-            fetch("http://localhost:4400/users")
+            fetch("http://localhost:4400/clients")
             .then(res => res.json())
             .then(data => {
                 setClients(data);
@@ -19,7 +19,7 @@ function Clients() {
             .catch(err => console.error(err));
 
         } else {
-            fetch(`http://localhost:4400/users/${id}`)
+            fetch(`http://localhost:4400/clients/${id}`)
             .then(res => res.json())
             .then(data => {
                 setClients([data]);
