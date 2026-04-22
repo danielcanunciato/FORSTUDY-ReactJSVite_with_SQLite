@@ -71,7 +71,21 @@ API.get("/users", (req,res)=>{
 })
 
 API.post("/users", (req,res)=>{
+    const { userName, userPass, userRole } = req.body;
     
+    db.run(
+        `INSERT INTO bd_users (username, password, role) VALUES (?, ?, ?)`, [userName, userPass, userRole], function(err) {
+            if (err) {
+                if (err.message.includes("UNIQUE")) {
+                    return res.status(409).json({error: "User already exists."});
+                } else { 
+                    return res.status(500).json({error: err.message});
+                }
+            }
+            
+            res.status(201).json({message: "User createad successfully", data: { user: userName, pass: userPass, role: userRole }});
+        }
+    )
 })
 
 // CLIENTS
