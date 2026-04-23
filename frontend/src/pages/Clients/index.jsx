@@ -9,6 +9,8 @@ function Clients() {
     const [getClientProds, setClientProds] = useState([]);
     const { id } = useParams();
 
+    const [getUsrExist, setUsrExist] = useState(false);
+
     useEffect(() => {
         if (!id) {
             fetch("http://localhost:4400/clients")
@@ -20,14 +22,35 @@ function Clients() {
 
         } else {
             fetch(`http://localhost:4400/clients/${id}`)
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 404) {
+                    return [];
+                }
+
+                if (!res.ok) {
+                    throw new Error("Error fetching client");
+                }
+
+                setUsrExist(true);
+                return res.json();
+            })
             .then(data => {
                 setClients([data]);
             })
             .catch(err => console.error(err));
 
             fetch(`http://localhost:4400/products/${id}`)
-            .then(res => res.json())
+            .then(res => {
+                if (res.status === 404) {
+                    return [];
+                }
+
+                if (!res.ok) {
+                    throw new Error("Error fetching clients products");
+                }
+
+                return res.json();
+            })
             .then(data => {
                 setClientProds(data);
                 console.log(data);
@@ -54,18 +77,55 @@ function Clients() {
                         Clientes Ativos
                     </h3>
 
+                    
                     {
-                        getClients.map(user => (
-                            <p
-                                style={{
-                                    textAlign: 'left',
-                                    backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
-                                }}
-                                key={user.id}
-                            >
-                                <b>{user.id}</b> :: <b>{user.name}</b>
-                            </p>
-                        ))
+                        (id) ? (
+                            getUsrExist ? (
+                                getClients.map(user => (
+                                    <p
+                                        style={{
+                                            textAlign: 'left',
+                                            backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                        }}
+                                        key={user.id}
+                                    >
+                                        <b>{user.id}</b> :: <b>{user.name}</b>
+                                    </p>
+                                ))
+                            ) : (
+                                <p
+                                    style={{
+                                        textAlign: 'left',
+                                        backgroundColor: '#050505'
+                                    }}
+                                >
+                                    <b>Não existe um cliente com este id.</b>
+                                </p>
+                            )
+                        ) : (
+                            getClients.length > 0 ? (
+                                getClients.map(user => (
+                                    <p
+                                        style={{
+                                            textAlign: 'left',
+                                            backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                        }}
+                                        key={user.id}
+                                    >
+                                        <b>{user.id}</b> :: <b>{user.name}</b>
+                                    </p>
+                                ))
+                            ) : (
+                                <p
+                                    style={{
+                                        textAlign: 'left',
+                                        backgroundColor: '#050505'
+                                    }}
+                                >
+                                    <b>Não há clientes ativos.</b>
+                                </p>
+                            )
+                        )
                     }
 
                 </div>
@@ -74,27 +134,35 @@ function Clients() {
 
                 <div>
 
-                    { id && 
+                    { (id && getUsrExist) &&
                         (
-                            <div>
-                                <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
-                                    Produtos atrelados a este id
-                                </h3>
+                            (getClientProds.length > 0) ? (
+                                <div>
+                                    <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
+                                        Produtos atrelados a este id
+                                    </h3>
 
-                                {
-                                    getClientProds.map(clientprod => (
-                                        <p
-                                            style={{
-                                                textAlign: 'left',
-                                                backgroundColor: clientprod.product_id % 2 === 0 ? '#0f0f0f' : '#050505'
-                                            }}
-                                            key={clientprod.product_id}
-                                        >
-                                            <b>{clientprod.product_id}</b> :: <b>{clientprod.product_name}</b>
-                                        </p>
-                                    ))
-                                }
-                            </div>
+                                    {
+                                        getClientProds.map(clientprod => (
+                                            <p
+                                                style={{
+                                                    textAlign: 'left',
+                                                    backgroundColor: clientprod.product_id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                                }}
+                                                key={clientprod.product_id}
+                                            >
+                                                <b>{clientprod.product_id}</b> :: <b>{clientprod.product_name}</b>
+                                            </p>
+                                        ))
+                                    }
+                                </div>
+                            ) : (
+                                <div>
+                                    <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
+                                        Este cliente não possui produtos.
+                                    </h3>
+                                </div>
+                            )
                         )
                     }
 

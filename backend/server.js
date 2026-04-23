@@ -49,11 +49,6 @@ db.run(`
     )
 `)
 
-// AUTO-DEV CREATION FOR TEST PURPOSES
-db.run(`
-    INSERT OR IGNORE INTO bd_users (username, password, role) VALUES ('DEVTEST','DEVTEST123','mst')`
-)
-
 db.run(`
     CREATE TABLE IF NOT EXISTS bd_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,7 +82,23 @@ const checkAuth = (authorizedRoles) => {
 }
 
 // HOME
-API.get("/", (req,res)=>{res.status(200).send("Hello World!")})
+API.get("/", (req,res)=>{
+
+    // AUTO-DEV CREATION FOR TEST PURPOSES
+    db.get(
+        `SELECT * FROM bd_users WHERE username = ?`, ["DEVTEST"], function(err, row) {
+            if (err) return res.status(500).json({error:err.message});
+            
+            if (!row) {
+                db.run(`
+                    INSERT OR IGNORE INTO bd_users (id, username, password, role) VALUES (1, 'DEVTEST','DEVTEST123','mst')`
+                )
+            }
+        }
+    )
+    
+    res.status(200).send("Hello World!")
+})
 
 // USERS
 API.post("/login", (req,res)=>{
@@ -118,6 +129,19 @@ API.get("/users", (req,res)=>{
             if (!rows.length > 0) return res.status(200).json({success: 'Response delievered successfully, but the table is empty.'});
 
             res.status(200).json(rows)
+        }
+    )
+})
+
+API.get("/users/:id", (req,res)=>{
+    const userID = req.params.id
+
+    db.get(
+        `SELECT * FROM bd_users WHERE id = ?`, [userID], function (err, row) {
+            if (err) return res.status(500).json({error: err.message});
+            if (!row) return res.status(404).json({error: "User of that id does not exist."});
+
+            res.status(200).json(row);
         }
     )
 })
