@@ -1,7 +1,12 @@
 // CREATE API, SET A HOST PORT AND IMPORT PACKAGES
 const express = require("express");
 const sqlite3 = require("sqlite3").verbose();
+const jwt = require('jsonwebtoken');
 const cors = require("cors");
+
+require('dotenv').config();
+
+const SECRET = process.env.JWT_SECRET || "uma_sequencia_muito_longa_e_aleatoria_12345";
 
 const API = express();
 const PORT = 4400;
@@ -44,6 +49,11 @@ db.run(`
     )
 `)
 
+// AUTO-DEV CREATION FOR TEST PURPOSES
+db.run(`
+    INSERT OR IGNORE INTO bd_users (username, password, role) VALUES ('DEVTEST','DEVTEST123','mst')`
+)
+
 db.run(`
     CREATE TABLE IF NOT EXISTS bd_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,10 +64,52 @@ db.run(`
     )`
 );
 
+const checkAuth = (authorizedRoles) => {
+    return (req, res, next) => {
+        const authHeader = req.headers['authorization'];
+        const token = authHeader && authHeader.split(' ')[1];
+
+        if (!token) return res.status(401).json({error: "No token specified."});
+
+        jwt.verify(token, SECRET, (err, decoded)=>{
+            if (err) return res.status(403).json({error: "Invalid Token."});
+
+            if (authorizedRoles.includes(decoded.role)) {
+                req.id = decoded.id;
+                req.username = decoded.username;
+                req.role = decoded.role;
+                next();
+            } else {
+                return res.status(403).json({error: "Insufficient Permission."})
+            }
+        })
+    }
+}
+
 // HOME
 API.get("/", (req,res)=>{res.status(200).send("Hello World!")})
 
 // USERS
+API.post("/login", (req,res)=>{
+    const { username, password } = req.body;
+
+    const query = `SELECT id, username, role FROM bd_users WHERE username = ? AND password = ?`;
+
+    db.get(query, [username, password], (err, user)=>{
+        if (err) return res.status(500).json({error: err.message});
+        if (!user) return res.status(401).json({error: "Wrong credentials."});
+
+        const token = jwt.sign({
+            id: user.id,
+            username: user.username,
+            role: user.role,
+        }, SECRET, { expiresIn: '1h' });
+
+        return res.status(200).json({auth: true, token: token});
+
+    })
+});
+
 API.get("/users", (req,res)=>{
     db.all(
         `SELECT * FROM bd_users`, [], (err,rows)=>{
@@ -70,7 +122,7 @@ API.get("/users", (req,res)=>{
     )
 })
 
-API.post("/users", (req,res)=>{
+API.post("/users", checkAuth(["mst"]), (req,res)=>{
     const { userName, userPass, userRole } = req.body;
     
     db.run(
@@ -88,6 +140,38 @@ API.post("/users", (req,res)=>{
     )
 })
 
+API.delete("/users/:id", checkAuth(["mst"]), (req,res)=>{
+    const deleteID = req.params.id;
+    const getClientID = req.id;
+
+    if (parseInt(deleteID) === getClientID) {
+        return res.status(400).json({error: "You can't delete yourself."});
+    }
+
+    db.get(
+        `SELECT username FROM bd_users WHERE id = ?`, [deleteID], (err,user)=>{
+            if (err) return res.status(500).json({error: err.message});
+            if (!user) return res.status(404).json({error: "User not found."});
+
+            if (user.username === "DEVTEST") {
+                return res.status(403).json({error: "System user cannot be deleted."});
+            }
+
+            db.run(
+                `DELETE FROM bd_users WHERE id = ?`, [deleteID], function(err){
+                    if (err) return res.status(500).json({error: err.message});
+                    res.status(200).json({success: "Deleted user successfully",
+                        data_deleted : {
+                            id: deleteID,
+                            name: user.username
+                        }
+                    })
+                }
+            )
+        }
+    )
+})
+
 // CLIENTS
 API.get("/clients", (req,res)=>{
     db.all(
@@ -101,7 +185,7 @@ API.get("/clients", (req,res)=>{
 
 API.get("/clients/:id", (req,res)=>{
     db.get(
-        `SELECT * FROM bd_users WHERE id = ?`, [req.params.id], function(err, row){
+        `SELECT * FROM bd_clients WHERE id = ?`, [req.params.id], function(err, row){
             if (err) return res.status(500).json({error:err.message});
             if (!row) return res.status(404).json({error:"User not found"});
             res.status(200).json(row)
@@ -109,7 +193,7 @@ API.get("/clients/:id", (req,res)=>{
     )
 })
 
-API.post("/clients", (req,res)=>{
+API.post("/clients", checkAuth(["adm", "mst"]), (req,res)=>{
     const new_client = req.query.clientName;
 
     if (!new_client) { return res.status(400).json({error: 'Missing fields'}) };
@@ -178,7 +262,7 @@ API.get("/products/:clientid", (req, res)=>{
     })
 })
 
-API.post("/products", (req, res) => {
+API.post("/products", checkAuth(["mst"]), (req, res) => {
     const { name, price, clientName } = req.body;
 
     if (!name || !price || !clientName) {
@@ -186,7 +270,7 @@ API.post("/products", (req, res) => {
     }
 
     db.get(
-        `SELECT id FROM bd_users WHERE name = ?`,
+        `SELECT id FROM bd_clients WHERE name = ?`,
         [clientName],
         (err, row) => {
             if (err) return res.status(500).json({ error: err.message });
