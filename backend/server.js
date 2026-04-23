@@ -4,7 +4,7 @@ const sqlite3 = require("sqlite3").verbose();
 const jwt = require('jsonwebtoken');
 const cors = require("cors");
 
-require('dotenv').config();
+require('dotenv').config({debug: true});
 
 const SECRET = process.env.JWT_SECRET || "uma_sequencia_muito_longa_e_aleatoria_12345";
 
@@ -55,6 +55,8 @@ db.run(`
         clientid INT,
         name TEXT UNIQUE,
         price INT,
+        quantity INT,
+        status BOOLEAN,
         FOREIGN KEY (clientid) REFERENCES bd_clients(id)
     )`
 );
@@ -122,15 +124,49 @@ API.post("/login", (req,res)=>{
 });
 
 API.get("/users", (req,res)=>{
-    db.all(
-        `SELECT * FROM bd_users`, [], (err,rows)=>{
-            if (err) return res.status(500).json({error: err.message});
-            if (!rows) return res.status(404).json({error: 'Table not found'});
-            if (!rows.length > 0) return res.status(200).json({success: 'Response delievered successfully, but the table is empty.'});
+    const { id, role, username } = req.query;
 
-            res.status(200).json(rows)
-        }
-    )
+    const finds = []
+    const values = [];
+
+    if (id !== undefined) {
+        finds.push("id = ?");
+        values.push(id);
+    }
+
+    if (role !== undefined) {
+        finds.push("role = ?");
+        values.push(role);
+    }
+
+    if (username !== undefined) {
+        finds.push("username = ?");
+        values.push(username);
+    }
+
+    if (!id && !role && !username) {
+        db.all(
+            `SELECT * FROM bd_users`, [], (err,rows)=>{
+                if (err) return res.status(500).json({error: err.message});
+                if (!rows) return res.status(404).json({error: 'Table not found'});
+                if (!rows.length > 0) return res.status(200).json({success: 'Response delievered successfully, but the table is empty.'});
+    
+                res.status(200).json(rows)
+            }
+        )
+
+    } else {
+        const query = `SELECT * FROM bd_users WHERE ${finds.join(" AND ")}`;
+
+        db.all(
+            query, [...values], function (err, rows) {
+                if (err) return res.status(500).json({error: err.message});
+
+                res.status(200).json(rows);
+            }
+        )
+    }
+    
 })
 
 API.get("/users/:id", (req,res)=>{
@@ -159,10 +195,98 @@ API.post("/users", checkAuth(["mst"]), (req,res)=>{
                 }
             }
             
-            res.status(201).json({message: "User createad successfully", data: { user: userName, pass: userPass, role: userRole }});
+            res.status(201).json({message: "User created successfully", data: { user: userName, pass: userPass, role: userRole }});
         }
     )
 })
+
+API.patch("/users/:id", checkAuth(["mst"]), (req, res) => {
+    const updateID = req.params.id;
+    const { username, password, role } = req.body;
+    const getCurrentID = req.id;
+
+    const updates = [];
+    const values = [];
+
+    if (parseInt(updateID) === getCurrentID) {
+        return res.status(400).json({ error: "You can't update yourself" });
+    }
+
+    const runUpdate = () => {
+        if (updates.length === 0) {
+            return res.status(400).json({ error: "No fields to update." });
+        }
+
+        updates.push("updated_at = CURRENT_TIMESTAMP");
+
+        const query = `UPDATE bd_users SET ${updates.join(", ")} WHERE id = ?`;
+
+        db.run(query, [...values, updateID], function (err) {
+            if (err) return res.status(500).json({ error: err.message });
+
+            if (this.changes === 0) {
+                return res.status(404).json({ error: "User not found." });
+            }
+
+            res.json({ message: "User updated successfully." });
+        });
+    };
+
+    // USERNAME
+    if (username !== undefined) {
+        if (username === "DEVTEST") {
+            return res.status(403).json({ error: "You cannot update the System user." });
+        }
+
+        updates.push("username = ?");
+        values.push(username);
+    }
+
+    // ROLE
+    if (role !== undefined) {
+        const roles = ["usr", "adm", "mst"];
+
+        if (!roles.includes(role)) {
+            return res.status(422).json({ error: "Unknown role." });
+        }
+
+        updates.push("role = ?");
+        values.push(role);
+    }
+
+    // PASSWORD (async part)
+    if (password !== undefined) {
+        db.get(
+            `SELECT username, password FROM bd_users WHERE id = ?`,
+            [updateID],
+            (err, row) => {
+                if (err) return res.status(500).json({ error: err.message });
+                if (!row) return res.status(404).json({ error: "User not found." });
+
+                if (row.username === "DEVTEST") {
+                    return res.status(403).json({
+                        error: "You cannot change DEVTEST's password.",
+                    });
+                }
+
+                if (password.trim() === row.password.trim()) {
+                    return res.status(409).json({
+                        error: "Your new password can't be the same as your old one.",
+                    });
+                }
+
+                updates.push("password = ?");
+                values.push(password);
+
+                // ✅ ONLY NOW run update
+                runUpdate();
+            }
+        );
+    } else {
+        // no password → run immediately
+        runUpdate();
+    }
+});
 
 API.delete("/users/:id", checkAuth(["mst"]), (req,res)=>{
     const deleteID = req.params.id;
