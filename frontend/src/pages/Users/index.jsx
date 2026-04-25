@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 
 function Users() {
 
     document.title = "Users List";
+
+    const [searchParams] = useSearchParams();
+    const getRole = searchParams.get("role");
 
     const [getUsers, setUsers] = useState([]);
     const { id } = useParams();
@@ -11,15 +14,7 @@ function Users() {
     const [getUsrExist, setUsrExist] = useState(false);
 
     useEffect(() => {
-        if (!id) {
-            fetch("http://localhost:4400/users")
-            .then(res => res.json())
-            .then(data => {
-                setUsers(data);
-            })
-            .catch(err => console.error(err));
-
-        } else {
+        if (id) {
             fetch(`http://localhost:4400/users/${id}`)
             .then(res => {
                 if (res.status === 404) {
@@ -35,6 +30,20 @@ function Users() {
             })
             .then(data => {
                 setUsers([data]);
+            })
+            .catch(err => console.error(err));
+
+        } else if (getRole) {
+            fetch(`http://localhost:4400/users?role=${getRole}`)
+            .then(res => res.json())
+            .then(data => setUsers(data))
+            .catch(err => console.error(err));
+
+        } else {
+            fetch("http://localhost:4400/users")
+            .then(res => res.json())
+            .then(data => {
+                setUsers(data);
             })
             .catch(err => console.error(err));
         }
