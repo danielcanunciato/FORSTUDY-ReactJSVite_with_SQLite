@@ -42,22 +42,29 @@ db.run(`
         username TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
         is_active INTEGER DEFAULT 1,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at DATETIME DEFAULT (DATETIME('now', 'localtime')),
+        updated_at DATETIME DEFAULT (DATETIME('now', 'localtime')),
 
         role TEXT DEFAULT 'usr'
     )
 `)
 
+// STATUS
+/*
+SHIPPED
+CANCELED
+RECEIVED
+ */
 db.run(`
     CREATE TABLE IF NOT EXISTS bd_products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         clientid INT,
-        name TEXT UNIQUE,
+        name TEXT,
         price INT,
         quantity INT,
-        status BOOLEAN,
-        FOREIGN KEY (clientid) REFERENCES bd_clients(id)
+        status TEXT DEFAULT 'SHIPPED',
+        FOREIGN KEY (clientid) REFERENCES bd_clients(id),
+        UNIQUE (clientid, name)
     )`
 );
 
@@ -85,7 +92,6 @@ const checkAuth = (authorizedRoles) => {
 
 // HOME
 API.get("/", (req,res)=>{
-
     // AUTO-DEV CREATION FOR TEST PURPOSES
     db.get(
         `SELECT * FROM bd_users WHERE username = ?`, ["DEVTEST"], function(err, row) {
@@ -118,7 +124,9 @@ API.post("/login", (req,res)=>{
             role: user.role,
         }, SECRET, { expiresIn: '1h' });
 
-        return res.status(200).json({auth: true, token: token});
+        const convert_role = user.role === "mst" ? "Master" : user.role === "adm" ? "Admin" : "User";
+
+        return res.status(200).json({auth: true, token: token, loggedUser_Role: convert_role});
 
     })
 });
@@ -232,7 +240,6 @@ API.patch("/users/:id", checkAuth(["mst"]), (req, res) => {
         });
     };
 
-    // USERNAME
     if (username !== undefined) {
         if (username === "DEVTEST") {
             return res.status(403).json({ error: "You cannot update the System user." });
@@ -242,7 +249,6 @@ API.patch("/users/:id", checkAuth(["mst"]), (req, res) => {
         values.push(username);
     }
 
-    // ROLE
     if (role !== undefined) {
         const roles = ["usr", "adm", "mst"];
 
@@ -254,7 +260,6 @@ API.patch("/users/:id", checkAuth(["mst"]), (req, res) => {
         values.push(role);
     }
 
-    // PASSWORD (async part)
     if (password !== undefined) {
         db.get(
             `SELECT username, password FROM bd_users WHERE id = ?`,
@@ -278,12 +283,10 @@ API.patch("/users/:id", checkAuth(["mst"]), (req, res) => {
                 updates.push("password = ?");
                 values.push(password);
 
-                // ✅ ONLY NOW run update
                 runUpdate();
             }
         );
     } else {
-        // no password → run immediately
         runUpdate();
     }
 });
@@ -375,6 +378,8 @@ API.get("/products", (req,res)=>{
             p.id AS product_id,
             p.name AS product_name,
             p.price AS product_price,
+            p.quantity AS product_quantity,
+            p.status AS product_status,
             p.clientid,
             u.name AS client_name
         FROM bd_products p
@@ -411,9 +416,9 @@ API.get("/products/:clientid", (req, res)=>{
 })
 
 API.post("/products", checkAuth(["mst"]), (req, res) => {
-    const { name, price, clientName } = req.body;
+    const { name, price, quantity, status, clientName } = req.body;
 
-    if (!name || !price || !clientName) {
+    if (!name || !price || !clientName || quantity || status) {
         return res.status(400).json({ error: "Missing fields" });
     }
 
@@ -431,10 +436,9 @@ API.post("/products", checkAuth(["mst"]), (req, res) => {
 
             const client_id = row.id;
 
-            // insert product
             db.run(
-                `INSERT INTO bd_products (clientid, name, price) VALUES (?, ?, ?)`,
-                [client_id, name, price],
+                `INSERT INTO bd_products (clientid, name, price, quantity, status) VALUES (?, ?, ?, ?, ?)`,
+                [client_id, name, price, quantity, status],
                 function (err) {
                     if (err) {
                         if (err.message.includes("UNIQUE")) {
