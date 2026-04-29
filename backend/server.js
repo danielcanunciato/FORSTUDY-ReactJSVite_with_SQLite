@@ -11,6 +11,8 @@ const SECRET = process.env.JWT_SECRET || "uma_sequencia_muito_longa_e_aleatoria_
 const API = express();
 const PORT = 4400;
 
+const serverROLES = ["mst", "adm", "usr"];
+
 // STUFF FOR API TO USE
 API.use(cors());
 API.use(express.json());
@@ -192,6 +194,10 @@ API.get("/users/:id", (req,res)=>{
 
 API.post("/users", checkAuth(["mst"]), (req,res)=>{
     const { userName, userPass, userRole } = req.body;
+
+    if (!serverROLES.includes(userRole)) {
+        return res.status(422).json({error: "Role does not exist."})
+    }
     
     db.run(
         `INSERT INTO bd_users (username, password, role) VALUES (?, ?, ?)`, [userName, userPass, userRole], function(err) {
@@ -415,10 +421,38 @@ API.get("/products/:clientid", (req, res)=>{
     })
 })
 
+API.get("/products/prod/:prodID", (req,res)=>{
+    const productID = req.params.prodID;
+
+    const query = `
+
+        SELECT
+            p.id AS product_id,
+            p.name AS product_name,
+            p.price AS product_price,
+            p.quantity AS product_quantity,
+            p.status AS product_status,
+            p.clientid AS client_id,
+            c.name AS client_name
+        FROM bd_products p
+        JOIN bd_clients c
+            ON p.clientid = c.id
+        WHERE p.id = ?
+
+    `;
+
+    db.get(query, [productID], (err,row)=>{
+        if (err) return res.status(500).json({error:err.message});
+        if (!row) return res.status(404).json({error: "Product not found."});
+
+        res.status(200).json(row);
+    })
+})
+
 API.post("/products", checkAuth(["mst"]), (req, res) => {
     const { name, price, quantity, status, clientName } = req.body;
 
-    if (!name || !price || !clientName || quantity || status) {
+    if (!name || !price || !clientName || !quantity || !status) {
         return res.status(400).json({ error: "Missing fields" });
     }
 
