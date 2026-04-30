@@ -406,6 +406,9 @@ API.get("/products/:clientid", (req, res)=>{
         SELECT
             p.id AS product_id,
             p.name AS product_name,
+            p.price AS product_price,
+            p.quantity AS product_quantity,
+            p.status AS product_status,
             p.clientid,
             u.name AS client_name
         FROM bd_products p

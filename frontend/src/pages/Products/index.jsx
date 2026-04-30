@@ -2,38 +2,59 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 function Products() {
-
     document.title = "Products List";
 
     const [getProds, setProds] = useState([]);
+    const [productExist, setProdExist] = useState(false);
     const { prodID } = useParams();
 
     useEffect(() => {
-        if (!prodID) {
-            fetch("http://localhost:4400/products")
-            .then(res => res.json())
-            .then(data => {
-                console.log(data);
-                setProds(data);
-            })
-            .catch(err => console.error(err));
+        const fetchProducts = async () => {
+            try {
+                let response;
 
-        } else {
-            fetch(`http://localhost:4400/products/prod/${prodID}`)
-            .then(res => res.json())
-            .then(data => {
-                if (data) {
-                    setProds(data);
+                // if there is no prodID → get all products
+                if (!prodID) {
+                    response = await fetch("http://localhost:4400/products");
                 }
-            })
-            .catch(err => console.error(err));
-        }
+                // if there is prodID → get single product
+                else {
+                    response = await fetch(
+                        `http://localhost:4400/products/${prodID}`
+                    );
+                }
 
-    }, []);
+                // no product found
+                if (response.status === 404) {
+                    setProdExist(false);
+                    setProds([]);
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error("Error fetching products");
+                }
+
+                const data = await response.json();
+
+                const normalizedData = Array.isArray(data) ? data : [data];
+
+                setProds(normalizedData);
+                setProdExist(normalizedData.length > 0);
+
+            } catch (err) {
+                console.error(err);
+                setProdExist(false);
+                setProds([]);
+            }
+        };
+
+        fetchProducts();
+    }, [prodID]);
 
     return (
         <>
-            <div style={{ marginTop: '16px' }}>
+            <div style={{ marginTop: "16px" }}>
                 <h1>Produtos</h1>
                 <p>
                     Experimento com listagem de produtos
@@ -52,10 +73,10 @@ function Products() {
                     Produtos Disponíveis
                 </h3>
 
-                {getProds.length > 0 ? (
+                {productExist ? (
                     <table
                         style={{
-                            width: "90%",
+                            width: "100%",
                             margin: "20px auto",
                             borderCollapse: "collapse",
                             textAlign: "left"
@@ -69,17 +90,18 @@ function Products() {
                                 }}
                             >
                                 <th style={{ padding: "12px" }}>ID</th>
-                                <th style={{ padding: "12px" }}>Product Name</th>
-                                <th style={{ padding: "12px" }}>Product Price</th>
-                                <th style={{ padding: "12px" }}>Product Quantity</th>
-                                <th style={{ padding: "12px" }}>Client Name</th>
+                                <th style={{ padding: "12px" }}>Nome</th>
+                                <th style={{ padding: "12px" }}>Preço</th>
+                                <th style={{ padding: "12px" }}>Quantidade</th>
+                                <th style={{ padding: "12px" }}>Status</th>
+                                <th style={{ padding: "12px" }}>#ID Cliente</th>
                             </tr>
                         </thead>
 
                         <tbody>
                             {getProds.map((prod, index) => (
                                 <tr
-                                    key={prod.product_id}
+                                    key={prod.product_prodID}
                                     style={{
                                         backgroundColor:
                                             index % 2 === 0
@@ -96,7 +118,10 @@ function Products() {
                                     </td>
 
                                     <td style={{ padding: "12px" }}>
-                                        ${prod.product_price}
+                                        R$
+                                        {Number(
+                                            prod.product_price
+                                        ).toFixed(2)}
                                     </td>
 
                                     <td style={{ padding: "12px" }}>
@@ -104,6 +129,14 @@ function Products() {
                                     </td>
 
                                     <td style={{ padding: "12px" }}>
+                                        {prod.product_status}
+                                    </td>
+
+                                    <td style={{ padding: "12px" }}>
+                                        <b>
+                                            #
+                                            {prod.clientid || prod.client_id}
+                                        </b>{" "}
                                         {prod.client_name}
                                     </td>
                                 </tr>

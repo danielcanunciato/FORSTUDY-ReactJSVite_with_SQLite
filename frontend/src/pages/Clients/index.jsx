@@ -2,66 +2,82 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 
 function Clients() {
-
     document.title = "Clients List";
 
-    const [getClients, setClients] = useState([]);
-    const [getClientProds, setClientProds] = useState([]);
     const { id } = useParams();
 
-    const [getUsrExist, setUsrExist] = useState(false);
+    const [clients, setClients] = useState([]);
+    const [clientProducts, setClientProducts] = useState([]);
+    const [clientExists, setClientExists] = useState(false);
 
     useEffect(() => {
-        if (!id) {
-            fetch("http://localhost:4400/clients")
-            .then(res => res.json())
-            .then(data => {
-                setClients(data);
-            })
-            .catch(err => console.error(err));
+        const fetchData = async () => {
+            try {
+                // NO ID → fetch all clients
+                if (!id) {
+                    const response = await fetch("http://localhost:4400/clients");
 
-        } else {
-            fetch(`http://localhost:4400/clients/${id}`)
-            .then(res => {
-                if (res.status === 404) {
-                    return [];
+                    if (!response.ok) {
+                        throw new Error("Error fetching clients");
+                    }
+
+                    const data = await response.json();
+                    setClients(data);
+                    return;
                 }
 
-                if (!res.ok) {
+                // WITH ID → fetch single client
+                const clientResponse = await fetch(
+                    `http://localhost:4400/clients/${id}`
+                );
+
+                if (clientResponse.status === 404) {
+                    setClientExists(false);
+                    setClients([]);
+                    setClientProducts([]);
+                    return;
+                }
+
+                if (!clientResponse.ok) {
                     throw new Error("Error fetching client");
                 }
 
-                setUsrExist(true);
-                return res.json();
-            })
-            .then(data => {
-                setClients([data]);
-            })
-            .catch(err => console.error(err));
+                const clientData = await clientResponse.json();
 
-            fetch(`http://localhost:4400/products/${id}`)
-            .then(res => {
-                if (res.status === 404) {
-                    return [];
+                setClients([clientData]);
+                setClientExists(true);
+
+                // fetch products from that client
+                const productsResponse = await fetch(
+                    `http://localhost:4400/products/${id}`
+                );
+
+                if (productsResponse.status === 404) {
+                    setClientProducts([]);
+                    return;
                 }
 
-                if (!res.ok) {
-                    throw new Error("Error fetching clients products");
+                if (!productsResponse.ok) {
+                    throw new Error("Error fetching client products");
                 }
 
-                return res.json();
-            })
-            .then(data => {
-                setClientProds(data);
-                console.log(data);
-            })
-            .catch(err => console.error(err));
-        }
-    }, []);
+                const productsData = await productsResponse.json();
+                setClientProducts(productsData);
+
+            } catch (error) {
+                console.error(error);
+                setClients([]);
+                setClientProducts([]);
+                setClientExists(false);
+            }
+        };
+
+        fetchData();
+    }, [id]);
 
     return (
         <>
-            <div style={{ marginTop: '16px' }}>
+            <div style={{ marginTop: "16px" }}>
                 <h1>Clients</h1>
                 <p>
                     Experimento com listagem de clientes ativos
@@ -70,103 +86,158 @@ function Clients() {
             </div>
 
             <div>
-
+                {/* CLIENT SECTION */}
                 <div>
-
-                    <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
+                    <h3
+                        style={{
+                            textAlign: "left",
+                            width: "75%",
+                            marginLeft: "15px"
+                        }}
+                    >
                         Clientes Ativos
                     </h3>
 
-                    
-                    {
-                        (id) ? (
-                            getUsrExist ? (
-                                getClients.map(user => (
-                                    <p
+                    {!id ? (
+                        clients.length > 0 ? (
+                            <table
+                                style={{
+                                    width: "100%",
+                                    margin: "20px auto",
+                                    borderCollapse: "collapse",
+                                    textAlign: "center"
+                                }}
+                            >
+                                <thead>
+                                    <tr
                                         style={{
-                                            textAlign: 'left',
-                                            backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                            backgroundColor: "#111",
+                                            color: "white"
                                         }}
-                                        key={user.id}
                                     >
-                                        <b>{user.id}</b> :: <b>{user.name}</b>
-                                    </p>
-                                ))
-                            ) : (
-                                <p
-                                    style={{
-                                        textAlign: 'left',
-                                        backgroundColor: '#050505'
-                                    }}
-                                >
-                                    <b>Não existe um cliente com este id.</b>
-                                </p>
-                            )
+                                        <th style={{ padding: "12px" }}>ID</th>
+                                        <th style={{ padding: "12px" }}>Nome</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+                                    {clients.map((client, index) => (
+                                        <tr
+                                            key={client.id}
+                                            style={{
+                                                backgroundColor:
+                                                    index % 2 === 0
+                                                        ? "#1a1a1a"
+                                                        : "#2a2a2a"
+                                            }}
+                                        >
+                                            <td style={{ padding: "12px" }}>
+                                                {client.id}
+                                            </td>
+
+                                            <td style={{ padding: "12px" }}>
+                                                {client.name}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         ) : (
-                            getClients.length > 0 ? (
-                                getClients.map(user => (
-                                    <p
+                            <p>Sem clientes ativos.</p>
+                        )
+                    ) : clientExists ? (
+                        <h2>
+                            <b>Cliente: </b>
+                            {clients[0]?.name}
+                        </h2>
+                    ) : (
+                        <h2>
+                            <span style={{ color: "red" }}>
+                                Cliente Inexistente
+                            </span>
+                        </h2>
+                    )}
+                </div>
+
+                <hr style={{ marginTop: "30px" }} />
+
+                {/* PRODUCTS SECTION */}
+                {id && clientExists && (
+                    <div>
+                        {clientProducts.length > 0 ? (
+                            <table
+                                style={{
+                                    width: "100%",
+                                    margin: "20px auto",
+                                    borderCollapse: "collapse",
+                                    textAlign: "center"
+                                }}
+                            >
+                                <thead>
+                                    <tr
                                         style={{
-                                            textAlign: 'left',
-                                            backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                            backgroundColor: "#111",
+                                            color: "white"
                                         }}
-                                        key={user.id}
                                     >
-                                        <b>{user.id}</b> :: <b>{user.name}</b>
-                                    </p>
-                                ))
-                            ) : (
-                                <p
-                                    style={{
-                                        textAlign: 'left',
-                                        backgroundColor: '#050505'
-                                    }}
-                                >
-                                    <b>Não há clientes ativos.</b>
-                                </p>
-                            )
-                        )
-                    }
+                                        <th style={{ padding: "12px" }}>ID</th>
+                                        <th style={{ padding: "12px" }}>
+                                            Produto
+                                        </th>
+                                        <th style={{ padding: "12px" }}>
+                                            Preço
+                                        </th>
+                                        <th style={{ padding: "12px" }}>
+                                            Quantidade
+                                        </th>
+                                        <th style={{ padding: "12px" }}>
+                                            Status
+                                        </th>
+                                    </tr>
+                                </thead>
 
-                </div>
+                                <tbody>
+                                    {clientProducts.map((prod, index) => (
+                                        <tr
+                                            key={prod.product_id}
+                                            style={{
+                                                backgroundColor:
+                                                    index % 2 === 0
+                                                        ? "#1a1a1a"
+                                                        : "#2a2a2a"
+                                            }}
+                                        >
+                                            <td style={{ padding: "12px" }}>
+                                                {prod.product_id}
+                                            </td>
 
-                <hr style={{marginTop: '30px'}} />
+                                            <td style={{ padding: "12px" }}>
+                                                {prod.product_name}
+                                            </td>
 
-                <div>
+                                            <td style={{ padding: "12px" }}>
+                                                R$
+                                                {Number(
+                                                    prod.product_price
+                                                ).toFixed(2)}
+                                            </td>
 
-                    { (id && getUsrExist) &&
-                        (
-                            (getClientProds.length > 0) ? (
-                                <div>
-                                    <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
-                                        Produtos atrelados a este id
-                                    </h3>
+                                            <td style={{ padding: "12px" }}>
+                                                {prod.product_quantity}
+                                            </td>
 
-                                    {
-                                        getClientProds.map(clientprod => (
-                                            <p
-                                                style={{
-                                                    textAlign: 'left',
-                                                    backgroundColor: clientprod.product_id % 2 === 0 ? '#0f0f0f' : '#050505'
-                                                }}
-                                                key={clientprod.product_id}
-                                            >
-                                                <b>{clientprod.product_id}</b> :: <b>{clientprod.product_name}</b>
-                                            </p>
-                                        ))
-                                    }
-                                </div>
-                            ) : (
-                                <div>
-                                    <h3 style={{ textAlign: 'left', width: '75%', marginLeft: '15px' }}>
-                                        Este cliente não possui produtos.
-                                    </h3>
-                                </div>
-                            )
-                        )
-                    }
-
-                </div>
+                                            <td style={{ padding: "12px" }}>
+                                                {prod.product_status}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : (
+                            <p>Este cliente não possui produtos.</p>
+                        )}
+                    </div>
+                )}
             </div>
         </>
     );

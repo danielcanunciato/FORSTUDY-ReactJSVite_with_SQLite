@@ -13,7 +13,7 @@ function WebRoutes() {
             <Routes>
 
                 <Route path="/products" element={<Products />}></Route>
-                <Route path="/products/:clientID" element={<Products />}></Route>
+                <Route path="/products/:prodID" element={<Products />}></Route>
 
                 <Route path="/clients" element={<Clients />}></Route>
                 <Route path="/clients/:id" element={<Clients />}></Route>
