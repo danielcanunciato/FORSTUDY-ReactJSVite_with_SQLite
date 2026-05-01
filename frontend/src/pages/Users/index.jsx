@@ -68,71 +68,78 @@ function Users() {
                     </h3>
 
                     
-                    {
-                        (!id) ? (
-                            getUsers.length > 0 ? (
-                                getUsers.map(user => (
-                                    <p
-                                        style={{
-                                            textAlign: 'left',
-                                            backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
-                                        }}
-                                        key={user.id}
-                                    >
-                                        <b>{user.id}</b> :: <b>{user.username}</b> :: <b>{
-                                            user.username === "DEVTEST" ? (
-                                                "SYSTEM"
-                                            ) : (
-                                                user.role === "mst" ? ( "MASTER" ) :
-                                                user.role === "adm" ? ( "ADMIN" ) :
-                                                ("USER")
-                                            )
-                                        }</b>
-                                    </p>
-                                ))
-                            ) : (
-                                <p
+                    {getUsers.length > 0 ? (
+                        <table
+                            style={{
+                                width: "100%",
+                                margin: "20px auto",
+                                borderCollapse: "collapse",
+                                textAlign: "left"
+                            }}
+                        >
+                            <thead>
+                                <tr
                                     style={{
-                                        textAlign: 'left',
-                                        backgroundColor: '#050505'
+                                        backgroundColor: "#111",
+                                        color: "white"
                                     }}
                                 >
-                                    <b>Não existe usuários ativos.</b>
-                                </p>
-                            )
-                        ) : (
-                            getUsrExist ? (
-                                getUsers.map(user => (
-                                    <p
+                                    <th style={{ padding: "12px" }}>ID</th>
+                                    <th style={{ padding: "12px" }}>Name</th>
+                                    <th style={{ padding: "12px" }}>Is Active</th>
+                                    <th style={{ padding: "12px" }}>Role</th>
+                                    <th style={{ padding: "12px" }}>Joined At</th>
+                                    <th style={{ padding: "12px" }}>Updated At</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {getUsers.map((client, index) => (
+                                    <tr
+                                        key={client.id}
                                         style={{
-                                            textAlign: 'left',
-                                            backgroundColor: user.id % 2 === 0 ? '#0f0f0f' : '#050505'
+                                            backgroundColor:
+                                                index % 2 === 0
+                                                    ? "#1a1a1a"
+                                                    : "#2a2a2a"
                                         }}
-                                        key={user.id}
                                     >
-                                        <b>{user.id}</b> :: <b>{user.username}</b> :: <b>{
-                                            user.username === "DEVTEST" ? (
-                                                "SYSTEM"
-                                            ) : (
-                                                user.role === "mst" ? ( "MASTER" ) :
-                                                user.role === "adm" ? ( "ADMIN" ) :
+                                        <td style={{ padding: "12px" }}>
+                                            {client.id}
+                                        </td>
+
+                                        <td style={{ padding: "12px" }}>
+                                            {client.username}
+                                        </td>
+
+                                        <td style={{ padding: "12px" }}>
+                                            {client.is_active == true ? ("✅") : ("❌")}
+                                        </td>
+
+                                        <td style={{ padding: "12px" }}>
+                                            {
+                                                client.role === "mst" ? ("MASTER") :
+                                                client.role === "adm" ? ("ADMIN") :
                                                 ("USER")
-                                            )
-                                        }</b>
-                                    </p>
-                                ))
-                            ) : (
-                                <p
-                                    style={{
-                                        textAlign: 'left',
-                                        backgroundColor: '#050505'
-                                    }}
-                                >
-                                    <b>Não existe um usuário com este id.</b>
-                                </p>
-                            )
-                        )
-                    }
+                                            }
+                                        </td>
+
+                                        <td style={{ padding: "12px" }}>
+                                            {client.created_at}
+                                        </td>
+
+                                        <td style={{ padding: "12px" }}>
+                                            {client.updated_at}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div>
+                            <p>Sem produtos existentes.</p>
+                        </div>
+                    )}
 
                 </div>
             </div>
